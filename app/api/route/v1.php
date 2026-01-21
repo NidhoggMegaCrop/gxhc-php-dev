@@ -106,6 +106,10 @@ Route::group(function () {
         Route::get('redemption/myCodes', 'v1.gxhc.RedemptionCodeController/myMintedCodes')->name('redemptionMyCodes')->option(['real_name' => '我的兑换码列表']);
         Route::get('redemption/myUseCodes', 'v1.gxhc.RedemptionCodeController/myMintedUseCodes')->name('redemptionMyCodes')->option(['real_name' => '我的兑换码列表']);
         Route::get('redemption/energyInfo', 'v1.gxhc.RedemptionCodeController/energyInfo')->name('redemptionEnergyInfo')->option(['real_name' => '能量信息']);
+
+        // 实战战报统计相关接口
+        Route::get('battle_stats/list', 'v1.gxhc.BattleStatsController/getStats')->name('battleStatsList')->option(['real_name' => '获取战报统计数据']);
+        Route::get('battle_stats/get/:key', 'v1.gxhc.BattleStatsController/getStatByKey')->name('battleStatsGetByKey')->option(['real_name' => '根据key获取统计项']);
     })->option(['mark' => 'gxhc', 'mark_name' => '国信合创接口']);
 
 })->middleware(\app\http\middleware\AllowOriginMiddleware::class)

@@ -93,3 +93,30 @@ Route::group('redemption', function () {
     \app\adminapi\middleware\AdminCheckRoleMiddleware::class,
     \app\adminapi\middleware\AdminLogMiddleware::class
 ])->option(['mark' => 'redemption', 'mark_name' => '兑换码管理']);
+
+/**
+ * 实战战报统计管理相关路由
+ */
+Route::group('battle_stats', function () {
+    // 战报统计列表
+    Route::get('list', 'v1.gxhc.BattleStats/index')->option(['real_name' => '战报统计列表']);
+    // 获取所有启用的统计项
+    Route::get('all', 'v1.gxhc.BattleStats/getAllStats')->option(['real_name' => '获取所有启用的战报统计项']);
+    // 战报统计详情
+    Route::get('detail/:id', 'v1.gxhc.BattleStats/read')->option(['real_name' => '战报统计详情']);
+    // 创建战报统计项
+    Route::post('create', 'v1.gxhc.BattleStats/save')->option(['real_name' => '创建战报统计项']);
+    // 更新战报统计项
+    Route::put('update/:id', 'v1.gxhc.BattleStats/update')->option(['real_name' => '更新战报统计项']);
+    // 删除战报统计项
+    Route::delete('delete/:id', 'v1.gxhc.BattleStats/delete')->option(['real_name' => '删除战报统计项']);
+    // 更新统计值
+    Route::put('update_value/:id', 'v1.gxhc.BattleStats/updateValue')->option(['real_name' => '更新战报统计值']);
+    // 修改状态
+    Route::put('set_status/:id', 'v1.gxhc.BattleStats/setStatus')->option(['real_name' => '修改战报统计状态']);
+})->middleware([
+    \app\http\middleware\AllowOriginMiddleware::class,
+    \app\adminapi\middleware\AdminAuthTokenMiddleware::class,
+    \app\adminapi\middleware\AdminCheckRoleMiddleware::class,
+    \app\adminapi\middleware\AdminLogMiddleware::class
+])->option(['mark' => 'battle_stats', 'mark_name' => '实战战报统计管理']);

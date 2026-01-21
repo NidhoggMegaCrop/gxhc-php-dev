@@ -1,0 +1,3 @@
+<?php
+define('INSTALL_DATE',1756439103);
+define('SERIALNUMBER','nETxsn');

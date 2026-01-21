@@ -1,0 +1,60 @@
+﻿<!DOCTYPE html>
+<html lang="zh">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>专供测试</title>
+    <style>
+        /* 设置背景颜色为粉色 */
+        body {
+            background-color: #ffc0cb; /* 粉色背景 */
+            font-family: Arial, sans-serif;
+            margin: 0;
+            padding: 0;
+            display: flex; /* 使用 flexbox 布局 */
+            justify-content: center; /* 水平居中 */
+            align-items: center; /* 垂直居中 */
+            height: 100vh; /* 使背景覆盖整个视口高度 */
+            text-align: center; /* 让文字居中 */
+        }
+
+        /* 设置背景图片 */
+        .bg-image {
+            background-image: url('https://example.com/background.jpg');
+            background-size: cover; /* 背景图片覆盖整个页面 */
+            background-position: center center; /* 背景图片居中 */
+            position: absolute; /* 背景图片绝对定位 */
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            z-index: -1; /* 让背景图片在内容下面 */
+        }
+
+        /* 页面内容的样式 */
+        .content {
+            padding: 20px;
+            color: black; /* 设置字体颜色为黑色 */
+        }
+
+        h1 {
+            font-size: 2em;
+        }
+
+        p {
+            font-size: 1.2em;
+        }
+
+        a {
+            color: #ff6347; /* 设置链接颜色 */
+            text-decoration: none;
+        }
+    </style>
+</head>
+<body>
+    <div class="bg-image"></div> <!-- 背景图片 -->
+    <div class="content">
+        <h1>专供测试</h1>
+    </div>
+</body>
+</html>

@@ -1,0 +1,9 @@
+*.log
+runtime/cache/
+runtime/log/
+runtime/temp/
+runtime/session/
+public/uploads/
+public/admin
+public/h5
+public/mobile

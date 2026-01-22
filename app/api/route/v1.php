@@ -110,6 +110,16 @@ Route::group(function () {
         // 实战战报统计相关接口
         Route::get('battle_stats/list', 'v1.gxhc.BattleStatsController/getStats')->name('battleStatsList')->option(['real_name' => '获取战报统计数据']);
         Route::get('battle_stats/get/:key', 'v1.gxhc.BattleStatsController/getStatByKey')->name('battleStatsGetByKey')->option(['real_name' => '根据key获取统计项']);
+
+        // 最新动态相关接口
+        Route::get('news/list', 'v1.gxhc.NewsController/getNewsList')->name('newsList')->option(['real_name' => '获取最新动态列表']);
+        Route::get('news/featured', 'v1.gxhc.NewsController/getFeaturedNews')->name('newsFeatured')->option(['real_name' => '获取精华动态']);
+        Route::get('news/detail/:id', 'v1.gxhc.NewsController/getNewsDetail')->name('newsDetail')->option(['real_name' => '获取动态详情']);
+
+        // 常见问题相关接口
+        Route::get('faq/list', 'v1.gxhc.FaqController/getFaqList')->name('faqList')->option(['real_name' => '获取常见问题列表']);
+        Route::get('faq/categories', 'v1.gxhc.FaqController/getCategories')->name('faqCategories')->option(['real_name' => '获取常见问题分类']);
+        Route::get('faq/detail/:id', 'v1.gxhc.FaqController/getFaqDetail')->name('faqDetail')->option(['real_name' => '获取常见问题详情']);
     })->option(['mark' => 'gxhc', 'mark_name' => '国信合创接口']);
 
 })->middleware(\app\http\middleware\AllowOriginMiddleware::class)

@@ -120,3 +120,55 @@ Route::group('battle_stats', function () {
     \app\adminapi\middleware\AdminCheckRoleMiddleware::class,
     \app\adminapi\middleware\AdminLogMiddleware::class
 ])->option(['mark' => 'battle_stats', 'mark_name' => '实战战报统计管理']);
+
+/**
+ * 最新动态管理相关路由
+ */
+Route::group('news', function () {
+    // 最新动态列表
+    Route::get('list', 'v1.gxhc.News/index')->option(['real_name' => '最新动态列表']);
+    // 获取所有启用的动态
+    Route::get('all', 'v1.gxhc.News/getAllNews')->option(['real_name' => '获取所有启用的动态']);
+    // 最新动态详情
+    Route::get('detail/:id', 'v1.gxhc.News/read')->option(['real_name' => '最新动态详情']);
+    // 创建最新动态
+    Route::post('create', 'v1.gxhc.News/save')->option(['real_name' => '创建最新动态']);
+    // 更新最新动态
+    Route::put('update/:id', 'v1.gxhc.News/update')->option(['real_name' => '更新最新动态']);
+    // 删除最新动态
+    Route::delete('delete/:id', 'v1.gxhc.News/delete')->option(['real_name' => '删除最新动态']);
+    // 修改状态
+    Route::put('set_status/:id', 'v1.gxhc.News/setStatus')->option(['real_name' => '修改最新动态状态']);
+})->middleware([
+    \app\http\middleware\AllowOriginMiddleware::class,
+    \app\adminapi\middleware\AdminAuthTokenMiddleware::class,
+    \app\adminapi\middleware\AdminCheckRoleMiddleware::class,
+    \app\adminapi\middleware\AdminLogMiddleware::class
+])->option(['mark' => 'news', 'mark_name' => '最新动态管理']);
+
+/**
+ * 常见问题管理相关路由
+ */
+Route::group('faq', function () {
+    // 常见问题列表
+    Route::get('list', 'v1.gxhc.Faq/index')->option(['real_name' => '常见问题列表']);
+    // 获取所有启用的常见问题
+    Route::get('all', 'v1.gxhc.Faq/getAllFaq')->option(['real_name' => '获取所有启用的常见问题']);
+    // 获取所有分类
+    Route::get('categories', 'v1.gxhc.Faq/getCategories')->option(['real_name' => '获取所有分类']);
+    // 常见问题详情
+    Route::get('detail/:id', 'v1.gxhc.Faq/read')->option(['real_name' => '常见问题详情']);
+    // 创建常见问题
+    Route::post('create', 'v1.gxhc.Faq/save')->option(['real_name' => '创建常见问题']);
+    // 更新常见问题
+    Route::put('update/:id', 'v1.gxhc.Faq/update')->option(['real_name' => '更新常见问题']);
+    // 删除常见问题
+    Route::delete('delete/:id', 'v1.gxhc.Faq/delete')->option(['real_name' => '删除常见问题']);
+    // 修改状态
+    Route::put('set_status/:id', 'v1.gxhc.Faq/setStatus')->option(['real_name' => '修改常见问题状态']);
+})->middleware([
+    \app\http\middleware\AllowOriginMiddleware::class,
+    \app\adminapi\middleware\AdminAuthTokenMiddleware::class,
+    \app\adminapi\middleware\AdminCheckRoleMiddleware::class,
+    \app\adminapi\middleware\AdminLogMiddleware::class
+])->option(['mark' => 'faq', 'mark_name' => '常见问题管理']);

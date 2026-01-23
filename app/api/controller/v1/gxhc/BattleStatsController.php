@@ -11,25 +11,31 @@
 
 namespace app\api\controller\v1\gxhc;
 
-use app\services\gxhc\BattleStatsServices;
 use app\Request;
 
 /**
- * 实战战报统计API
+ * 实战战报统计API（简化版 - 使用系统配置存储）
  * Class BattleStatsController
  * @package app\api\controller\v1\gxhc
  */
 class BattleStatsController
 {
-    protected $services = NULL;
+    /**
+     * 配置项名称
+     */
+    const CONFIG_NAME = 'gxhc_battle_stats';
 
     /**
-     * BattleStatsController constructor.
-     * @param BattleStatsServices $services
+     * 获取所有数据
+     * @return array
      */
-    public function __construct(BattleStatsServices $services)
+    protected function getAllData(): array
     {
-        $this->services = $services;
+        $data = sys_config(self::CONFIG_NAME);
+        if (empty($data) || !is_array($data)) {
+            return [];
+        }
+        return $data;
     }
 
     /**
@@ -39,28 +45,34 @@ class BattleStatsController
      */
     public function getStats(Request $request)
     {
-        try {
-            $list = $this->services->getAllStats();
+        $allData = $this->getAllData();
 
-            // 格式化数据，方便前端使用
-            $data = [];
-            foreach ($list as $item) {
-                $data[] = [
-                    'id' => $item['id'],
-                    'key' => $item['key'],
-                    'name' => $item['name'],
-                    'value' => $item['value'],
-                    'unit' => $item['unit'],
-                    'description' => $item['description'],
-                    'icon' => $item['icon'],
-                    'sort' => $item['sort']
-                ];
-            }
+        // 只返回启用的
+        $list = array_filter($allData, function($item) {
+            return ($item['status'] ?? 0) == 1;
+        });
 
-            return app('json')->success($data);
-        } catch (\Exception $e) {
-            return app('json')->fail($e->getMessage());
+        // 排序
+        usort($list, function($a, $b) {
+            return ($b['sort'] ?? 0) - ($a['sort'] ?? 0);
+        });
+
+        // 格式化数据，方便前端使用
+        $data = [];
+        foreach ($list as $item) {
+            $data[] = [
+                'id' => $item['id'],
+                'key' => $item['key'],
+                'name' => $item['name'],
+                'value' => $item['value'],
+                'unit' => $item['unit'],
+                'description' => $item['description'] ?? '',
+                'icon' => $item['icon'] ?? '',
+                'sort' => $item['sort'] ?? 0
+            ];
         }
+
+        return app('json')->success($data);
     }
 
     /**
@@ -76,11 +88,22 @@ class BattleStatsController
             return app('json')->fail('参数错误');
         }
 
-        try {
-            $data = $this->services->getByKey($key);
-            return app('json')->success($data);
-        } catch (\Exception $e) {
-            return app('json')->fail($e->getMessage());
+        $allData = $this->getAllData();
+
+        foreach ($allData as $item) {
+            if (($item['key'] ?? '') == $key && ($item['status'] ?? 0) == 1) {
+                return app('json')->success([
+                    'id' => $item['id'],
+                    'key' => $item['key'],
+                    'name' => $item['name'],
+                    'value' => $item['value'],
+                    'unit' => $item['unit'],
+                    'description' => $item['description'] ?? '',
+                    'icon' => $item['icon'] ?? ''
+                ]);
+            }
         }
+
+        return app('json')->fail('数据不存在');
     }
 }

@@ -11,25 +11,31 @@
 
 namespace app\api\controller\v1\gxhc;
 
-use app\services\gxhc\FaqServices;
 use app\Request;
 
 /**
- * 常见问题API
+ * 常见问题API（简化版 - 使用系统配置存储）
  * Class FaqController
  * @package app\api\controller\v1\gxhc
  */
 class FaqController
 {
-    protected $services = NULL;
+    /**
+     * 配置项名称
+     */
+    const CONFIG_NAME = 'gxhc_faq';
 
     /**
-     * FaqController constructor.
-     * @param FaqServices $services
+     * 获取所有数据
+     * @return array
      */
-    public function __construct(FaqServices $services)
+    protected function getAllData(): array
     {
-        $this->services = $services;
+        $data = sys_config(self::CONFIG_NAME);
+        if (empty($data) || !is_array($data)) {
+            return [];
+        }
+        return $data;
     }
 
     /**
@@ -39,16 +45,33 @@ class FaqController
      */
     public function getFaqList(Request $request)
     {
-        try {
-            $category = $request->get('category', '');
-            $limit = (int)$request->get('limit', 20);
+        $category = $request->get('category', '');
+        $limit = (int)$request->get('limit', 20);
 
-            $list = $this->services->getAllFaq($category, $limit);
+        $allData = $this->getAllData();
 
-            return app('json')->success($list);
-        } catch (\Exception $e) {
-            return app('json')->fail($e->getMessage());
+        // 只返回启用的
+        $list = array_filter($allData, function($item) use ($category) {
+            if (($item['status'] ?? 0) != 1) {
+                return false;
+            }
+            if (!empty($category) && ($item['category'] ?? '') != $category) {
+                return false;
+            }
+            return true;
+        });
+
+        // 排序
+        usort($list, function($a, $b) {
+            return ($b['sort'] ?? 0) - ($a['sort'] ?? 0);
+        });
+
+        $list = array_values($list);
+        if ($limit > 0) {
+            $list = array_slice($list, 0, $limit);
         }
+
+        return app('json')->success($list);
     }
 
     /**
@@ -58,12 +81,17 @@ class FaqController
      */
     public function getCategories(Request $request)
     {
-        try {
-            $categories = $this->services->getAllCategories();
-            return app('json')->success($categories);
-        } catch (\Exception $e) {
-            return app('json')->fail($e->getMessage());
+        $allData = $this->getAllData();
+        $categories = [];
+
+        foreach ($allData as $item) {
+            $category = $item['category'] ?? '';
+            if (!empty($category) && ($item['status'] ?? 0) == 1 && !in_array($category, $categories)) {
+                $categories[] = $category;
+            }
         }
+
+        return app('json')->success($categories);
     }
 
     /**
@@ -79,12 +107,14 @@ class FaqController
             return app('json')->fail('参数错误');
         }
 
-        try {
-            // 获取详情并增加查看次数
-            $info = $this->services->getInfo($id, true);
-            return app('json')->success($info);
-        } catch (\Exception $e) {
-            return app('json')->fail($e->getMessage());
+        $allData = $this->getAllData();
+
+        foreach ($allData as $item) {
+            if ($item['id'] == $id) {
+                return app('json')->success($item);
+            }
         }
+
+        return app('json')->fail('数据不存在');
     }
 }

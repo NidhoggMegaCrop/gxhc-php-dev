@@ -11,26 +11,63 @@
 namespace app\adminapi\controller\v1\gxhc;
 
 use app\adminapi\controller\AuthController;
-use app\services\gxhc\FaqServices;
+use app\services\system\config\SystemConfigServices;
 use think\facade\App;
+use crmeb\services\CacheService;
 
 /**
- * 常见问题管理
+ * 常见问题管理（简化版 - 使用系统配置存储）
  * Class Faq
  * @package app\adminapi\controller\v1\gxhc
  */
 class Faq extends AuthController
 {
     /**
+     * 配置项名称
+     */
+    const CONFIG_NAME = 'gxhc_faq';
+
+    /**
+     * SystemConfigServices
+     * @var SystemConfigServices
+     */
+    protected $configServices;
+
+    /**
      * 构造方法
      * Faq constructor.
      * @param App $app
-     * @param FaqServices $services
+     * @param SystemConfigServices $configServices
      */
-    public function __construct(App $app, FaqServices $services)
+    public function __construct(App $app, SystemConfigServices $configServices)
     {
         parent::__construct($app);
-        $this->services = $services;
+        $this->configServices = $configServices;
+    }
+
+    /**
+     * 获取所有FAQ数据
+     * @return array
+     */
+    protected function getAllData(): array
+    {
+        $data = sys_config(self::CONFIG_NAME);
+        if (empty($data) || !is_array($data)) {
+            return [];
+        }
+        return $data;
+    }
+
+    /**
+     * 保存所有数据
+     * @param array $data
+     * @return bool
+     */
+    protected function saveAllData(array $data): bool
+    {
+        $this->configServices->update(['menu_name' => self::CONFIG_NAME], ['value' => json_encode($data)]);
+        CacheService::clear();
+        return true;
     }
 
     /**
@@ -47,8 +84,42 @@ class Faq extends AuthController
             ['keyword', '']
         ]);
 
-        $result = $this->services->getList($where);
-        return app('json')->success($result);
+        $allData = $this->getAllData();
+
+        // 过滤
+        if ($where['status'] !== '') {
+            $allData = array_filter($allData, function($item) use ($where) {
+                return $item['status'] == $where['status'];
+            });
+        }
+        if (!empty($where['category'])) {
+            $category = $where['category'];
+            $allData = array_filter($allData, function($item) use ($category) {
+                return ($item['category'] ?? '') == $category;
+            });
+        }
+        if (!empty($where['keyword'])) {
+            $keyword = $where['keyword'];
+            $allData = array_filter($allData, function($item) use ($keyword) {
+                return strpos($item['question'] ?? '', $keyword) !== false || strpos($item['answer'] ?? '', $keyword) !== false;
+            });
+        }
+
+        // 排序
+        usort($allData, function($a, $b) {
+            return ($b['sort'] ?? 0) - ($a['sort'] ?? 0);
+        });
+
+        // 分页
+        $total = count($allData);
+        $page = max(1, (int)$where['page']);
+        $limit = max(1, (int)$where['limit']);
+        $list = array_slice(array_values($allData), ($page - 1) * $limit, $limit);
+
+        return app('json')->success([
+            'list' => $list,
+            'count' => $total
+        ]);
     }
 
     /**
@@ -60,7 +131,29 @@ class Faq extends AuthController
         $category = $this->request->get('category', '');
         $limit = (int)$this->request->get('limit', 0);
 
-        $list = $this->services->getAllFaq($category, $limit);
+        $allData = $this->getAllData();
+
+        // 只返回启用的
+        $list = array_filter($allData, function($item) use ($category) {
+            if (($item['status'] ?? 0) != 1) {
+                return false;
+            }
+            if (!empty($category) && ($item['category'] ?? '') != $category) {
+                return false;
+            }
+            return true;
+        });
+
+        // 排序
+        usort($list, function($a, $b) {
+            return ($b['sort'] ?? 0) - ($a['sort'] ?? 0);
+        });
+
+        $list = array_values($list);
+        if ($limit > 0) {
+            $list = array_slice($list, 0, $limit);
+        }
+
         return app('json')->success($list);
     }
 
@@ -70,7 +163,16 @@ class Faq extends AuthController
      */
     public function getCategories()
     {
-        $categories = $this->services->getAllCategories();
+        $allData = $this->getAllData();
+        $categories = [];
+
+        foreach ($allData as $item) {
+            $category = $item['category'] ?? '';
+            if (!empty($category) && !in_array($category, $categories)) {
+                $categories[] = $category;
+            }
+        }
+
         return app('json')->success($categories);
     }
 
@@ -85,12 +187,14 @@ class Faq extends AuthController
             return app('json')->fail('参数错误');
         }
 
-        try {
-            $info = $this->services->getInfo((int)$id);
-            return app('json')->success($info);
-        } catch (\Exception $e) {
-            return app('json')->fail($e->getMessage());
+        $allData = $this->getAllData();
+        foreach ($allData as $item) {
+            if ($item['id'] == $id) {
+                return app('json')->success($item);
+            }
         }
+
+        return app('json')->fail('数据不存在');
     }
 
     /**
@@ -114,12 +218,24 @@ class Faq extends AuthController
             return app('json')->fail('请填写答案');
         }
 
-        try {
-            $this->services->create($data);
-            return app('json')->success('创建成功');
-        } catch (\Exception $e) {
-            return app('json')->fail($e->getMessage());
+        $allData = $this->getAllData();
+
+        // 生成新ID
+        $maxId = 0;
+        foreach ($allData as $item) {
+            if (($item['id'] ?? 0) > $maxId) {
+                $maxId = $item['id'];
+            }
         }
+        $data['id'] = $maxId + 1;
+        $data['add_time'] = time();
+        $data['update_time'] = time();
+        $data['view_count'] = 0;
+
+        $allData[] = $data;
+        $this->saveAllData($allData);
+
+        return app('json')->success('创建成功');
     }
 
     /**
@@ -141,17 +257,27 @@ class Faq extends AuthController
             ['status', 1]
         ]);
 
-        // 移除空值
-        $data = array_filter($data, function($value) {
-            return $value !== '';
-        });
+        $allData = $this->getAllData();
+        $found = false;
 
-        try {
-            $this->services->update((int)$id, $data);
-            return app('json')->success('更新成功');
-        } catch (\Exception $e) {
-            return app('json')->fail($e->getMessage());
+        foreach ($allData as $index => $item) {
+            if ($item['id'] == $id) {
+                // 合并数据
+                $allData[$index] = array_merge($item, array_filter($data, function($v) {
+                    return $v !== '';
+                }));
+                $allData[$index]['update_time'] = time();
+                $found = true;
+                break;
+            }
         }
+
+        if (!$found) {
+            return app('json')->fail('数据不存在');
+        }
+
+        $this->saveAllData($allData);
+        return app('json')->success('更新成功');
     }
 
     /**
@@ -165,12 +291,21 @@ class Faq extends AuthController
             return app('json')->fail('参数错误');
         }
 
-        try {
-            $this->services->delete((int)$id);
-            return app('json')->success('删除成功');
-        } catch (\Exception $e) {
-            return app('json')->fail($e->getMessage());
+        $allData = $this->getAllData();
+        $newData = [];
+
+        foreach ($allData as $item) {
+            if ($item['id'] != $id) {
+                $newData[] = $item;
+            }
         }
+
+        if (count($newData) == count($allData)) {
+            return app('json')->fail('数据不存在');
+        }
+
+        $this->saveAllData($newData);
+        return app('json')->success('删除成功');
     }
 
     /**
@@ -186,11 +321,23 @@ class Faq extends AuthController
 
         $status = $this->request->post('status', 1);
 
-        try {
-            $this->services->setStatus((int)$id, (int)$status);
-            return app('json')->success('修改成功');
-        } catch (\Exception $e) {
-            return app('json')->fail($e->getMessage());
+        $allData = $this->getAllData();
+        $found = false;
+
+        foreach ($allData as $index => $item) {
+            if ($item['id'] == $id) {
+                $allData[$index]['status'] = (int)$status;
+                $allData[$index]['update_time'] = time();
+                $found = true;
+                break;
+            }
         }
+
+        if (!$found) {
+            return app('json')->fail('数据不存在');
+        }
+
+        $this->saveAllData($allData);
+        return app('json')->success('修改成功');
     }
 }

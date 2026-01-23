@@ -11,25 +11,55 @@
 
 namespace app\api\controller\v1\gxhc;
 
-use app\services\gxhc\NewsServices;
 use app\Request;
 
 /**
- * 最新动态API
+ * 最新动态API（简化版 - 使用系统配置存储）
  * Class NewsController
  * @package app\api\controller\v1\gxhc
  */
 class NewsController
 {
-    protected $services = NULL;
+    /**
+     * 配置项名称
+     */
+    const CONFIG_NAME = 'gxhc_news';
 
     /**
-     * NewsController constructor.
-     * @param NewsServices $services
+     * 获取所有数据
+     * @return array
      */
-    public function __construct(NewsServices $services)
+    protected function getAllData(): array
     {
-        $this->services = $services;
+        $data = sys_config(self::CONFIG_NAME);
+        if (empty($data) || !is_array($data)) {
+            return [];
+        }
+        return $data;
+    }
+
+    /**
+     * 格式化相对时间
+     * @param int $timestamp
+     * @return string
+     */
+    protected function formatTimeAgo(int $timestamp): string
+    {
+        $diff = time() - $timestamp;
+
+        if ($diff < 60) {
+            return '刚刚';
+        } elseif ($diff < 3600) {
+            return floor($diff / 60) . '分钟前';
+        } elseif ($diff < 86400) {
+            return floor($diff / 3600) . '小时前';
+        } elseif ($diff < 2592000) {
+            return floor($diff / 86400) . '天前';
+        } elseif ($diff < 31536000) {
+            return floor($diff / 2592000) . '个月前';
+        } else {
+            return floor($diff / 31536000) . '年前';
+        }
     }
 
     /**
@@ -39,16 +69,41 @@ class NewsController
      */
     public function getNewsList(Request $request)
     {
-        try {
-            $type = $request->get('type', '');
-            $limit = (int)$request->get('limit', 20);
+        $type = $request->get('type', '');
+        $limit = (int)$request->get('limit', 20);
 
-            $list = $this->services->getAllNews($type, $limit);
+        $allData = $this->getAllData();
 
-            return app('json')->success($list);
-        } catch (\Exception $e) {
-            return app('json')->fail($e->getMessage());
+        // 只返回启用的
+        $list = array_filter($allData, function($item) use ($type) {
+            if (($item['status'] ?? 0) != 1) {
+                return false;
+            }
+            if (!empty($type) && ($item['type'] ?? '') != $type) {
+                return false;
+            }
+            return true;
+        });
+
+        // 排序（按发布时间倒序）
+        usort($list, function($a, $b) {
+            $timeA = $a['publish_time'] ?? $a['add_time'] ?? 0;
+            $timeB = $b['publish_time'] ?? $b['add_time'] ?? 0;
+            return $timeB - $timeA;
+        });
+
+        $list = array_values($list);
+        if ($limit > 0) {
+            $list = array_slice($list, 0, $limit);
         }
+
+        // 添加格式化的时间
+        foreach ($list as &$item) {
+            $publishTime = $item['publish_time'] ?? $item['add_time'] ?? time();
+            $item['time_ago'] = $this->formatTimeAgo($publishTime);
+        }
+
+        return app('json')->success($list);
     }
 
     /**
@@ -58,15 +113,34 @@ class NewsController
      */
     public function getFeaturedNews(Request $request)
     {
-        try {
-            $limit = (int)$request->get('limit', 10);
+        $limit = (int)$request->get('limit', 10);
 
-            $list = $this->services->getAllNews('featured', $limit);
+        $allData = $this->getAllData();
 
-            return app('json')->success($list);
-        } catch (\Exception $e) {
-            return app('json')->fail($e->getMessage());
+        // 只返回启用的且类型为featured
+        $list = array_filter($allData, function($item) {
+            return ($item['status'] ?? 0) == 1 && ($item['type'] ?? '') == 'featured';
+        });
+
+        // 排序
+        usort($list, function($a, $b) {
+            $timeA = $a['publish_time'] ?? $a['add_time'] ?? 0;
+            $timeB = $b['publish_time'] ?? $b['add_time'] ?? 0;
+            return $timeB - $timeA;
+        });
+
+        $list = array_values($list);
+        if ($limit > 0) {
+            $list = array_slice($list, 0, $limit);
         }
+
+        // 添加格式化的时间
+        foreach ($list as &$item) {
+            $publishTime = $item['publish_time'] ?? $item['add_time'] ?? time();
+            $item['time_ago'] = $this->formatTimeAgo($publishTime);
+        }
+
+        return app('json')->success($list);
     }
 
     /**
@@ -82,12 +156,17 @@ class NewsController
             return app('json')->fail('参数错误');
         }
 
-        try {
-            // 获取详情并增加浏览次数
-            $info = $this->services->getInfo($id, true);
-            return app('json')->success($info);
-        } catch (\Exception $e) {
-            return app('json')->fail($e->getMessage());
+        $allData = $this->getAllData();
+
+        foreach ($allData as $item) {
+            if ($item['id'] == $id) {
+                $publishTime = $item['publish_time'] ?? $item['add_time'] ?? time();
+                $item['time_ago'] = $this->formatTimeAgo($publishTime);
+                $item['publish_time_format'] = date('Y-m-d H:i:s', $publishTime);
+                return app('json')->success($item);
+            }
         }
+
+        return app('json')->fail('数据不存在');
     }
 }

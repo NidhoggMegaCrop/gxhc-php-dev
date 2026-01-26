@@ -120,6 +120,13 @@ Route::group(function () {
         Route::get('faq/list', 'v1.gxhc.FaqController/getFaqList')->name('faqList')->option(['real_name' => '获取常见问题列表']);
         Route::get('faq/categories', 'v1.gxhc.FaqController/getCategories')->name('faqCategories')->option(['real_name' => '获取常见问题分类']);
         Route::get('faq/detail/:id', 'v1.gxhc.FaqController/getFaqDetail')->name('faqDetail')->option(['real_name' => '获取常见问题详情']);
+
+        // 消息中心相关接口
+        Route::get('message_center/list', 'v1.gxhc.MessageCenterController/list')->name('messageCenterList')->option(['real_name' => '消息中心列表']);
+        Route::get('message_center/detail/:id', 'v1.gxhc.MessageCenterController/detail')->name('messageCenterDetail')->option(['real_name' => '消息详情']);
+        Route::get('message_center/unread_count', 'v1.gxhc.MessageCenterController/unreadCount')->name('messageCenterUnreadCount')->option(['real_name' => '未读消息数量']);
+        Route::post('message_center/mark_read', 'v1.gxhc.MessageCenterController/markRead')->name('messageCenterMarkRead')->option(['real_name' => '标记消息已读']);
+        Route::post('message_center/delete/:id', 'v1.gxhc.MessageCenterController/delete')->name('messageCenterDelete')->option(['real_name' => '删除消息']);
     })->option(['mark' => 'gxhc', 'mark_name' => '国信合创接口']);
 
 })->middleware(\app\http\middleware\AllowOriginMiddleware::class)

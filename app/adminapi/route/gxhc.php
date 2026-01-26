@@ -172,3 +172,28 @@ Route::group('faq', function () {
     \app\adminapi\middleware\AdminCheckRoleMiddleware::class,
     \app\adminapi\middleware\AdminLogMiddleware::class
 ])->option(['mark' => 'faq', 'mark_name' => '常见问题管理']);
+
+/**
+ * 消息中心管理相关路由
+ */
+Route::group('message_center', function () {
+    // 消息列表
+    Route::get('list', 'v1.gxhc.MessageCenter/index')->option(['real_name' => '消息中心列表']);
+    // 消息详情
+    Route::get('detail/:id', 'v1.gxhc.MessageCenter/read')->option(['real_name' => '消息详情']);
+    // 创建消息（系统公告/内容推送/定向消息）
+    Route::post('create', 'v1.gxhc.MessageCenter/save')->option(['real_name' => '创建消息']);
+    // 更新消息
+    Route::put('update/:id', 'v1.gxhc.MessageCenter/update')->option(['real_name' => '更新消息']);
+    // 删除消息
+    Route::delete('delete/:id', 'v1.gxhc.MessageCenter/delete')->option(['real_name' => '删除消息']);
+    // 修改消息状态
+    Route::put('set_status/:id', 'v1.gxhc.MessageCenter/setStatus')->option(['real_name' => '修改消息状态']);
+    // 统计概览
+    Route::get('overview', 'v1.gxhc.MessageCenter/overview')->option(['real_name' => '消息统计概览']);
+})->middleware([
+    \app\http\middleware\AllowOriginMiddleware::class,
+    \app\adminapi\middleware\AdminAuthTokenMiddleware::class,
+    \app\adminapi\middleware\AdminCheckRoleMiddleware::class,
+    \app\adminapi\middleware\AdminLogMiddleware::class
+])->option(['mark' => 'message_center', 'mark_name' => '消息中心管理']);
